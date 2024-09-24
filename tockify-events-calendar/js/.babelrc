@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    [
+      "@babel/transform-react-jsx",
+      {
+        "pragma": "wp.element.createElement",
+        "pragmaFrag": "wp.element.Fragment"
+      }
+    ],
+    "@babel/plugin-syntax-dynamic-import"
+  ]
+}
