@@ -524,7 +524,9 @@ class TockifyBlock extends Component {
               } }
               placeholder='Enter Attributes'
               formatCreateLabel={val => "Add attribute: " + val}
-              isValidNewOption={input => input.match(/^[\w\d-]+=\S/)}
+              isValidNewOption={input =>
+                /^[a-zA-Z_][\w.-]*=[^<>"'`=\\]+$/.test(input.trim())
+              }
               noOptionsMessage={() => 'Enter name=value'}
             />
           </PanelRow>
@@ -595,4 +597,3 @@ class TockifyBlock extends Component {
 }
 
 registerBlockType('tockify/tockify-events-calendar', new TockifyBlock());
-

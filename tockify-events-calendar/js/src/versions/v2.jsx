@@ -88,9 +88,10 @@ export const getCoreEmbedCode = (props, preview) => {
 
   if (extras && extras.length > 0) {
     extras.forEach(x => {
-      const kv = x.split('=', 2);
-      if (kv.length > 1 && kv[0].match(/^[\w\d-]+$/)) {
-        unscopedEmbedProps[kv[0]] = kv[1].replace(/^['"](.*)['"]$/, "$1");
+      const [key, val] = x.split('=', 2);
+      if (/^[a-zA-Z_][\w.-]*$/.test(key) &&
+        typeof val === 'string' && !/[\s<>"'`=\\]/.test(val)) {
+          unscopedEmbedProps[key] = val.trim();
       }
     })
   }
