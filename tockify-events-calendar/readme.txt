@@ -2,7 +2,7 @@
 Contributors: Tockify
 Tags: events, calendar, event, events calendar, date, google, conference, icalendar, ics, webinar, recurring, agenda, workshop, concert, meeting, seminar, summit
 Requires at least: 4.1
-Tested up to: 6.8
+Tested up to: 6.9
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -106,6 +106,9 @@ More information and details about how to use the Tockify plugin and shortcode a
 5. **Mini Calendar** widget for sidebars and small spaces.
 
 == Changelog ==
+
+= 2.3.1 =
+* Tested with Wordpress 6.9
 
 = 2.3.0 =
 * Tested with Wordpress 6.8
@@ -354,6 +357,10 @@ More information and details about how to use the Tockify plugin and shortcode a
 * This is the beginning
 
 == Upgrade Notice ==
+
+= 2.3.1 =
+* Tested with Wordpress 6.9
+* No code changes
 
 = 2.3.0 =
 * Tested with Wordpress 6.8
