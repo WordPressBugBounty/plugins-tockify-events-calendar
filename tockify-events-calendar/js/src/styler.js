@@ -213,30 +213,38 @@ export const showScrollBar = () => {
 };
 
 
-// fix react-select cursor position
-const newSelectSheet = () => {
-  const embedEl = querySelector('[tkfwp-select="true"]');
+/*
+ * fix react-select cursor position
+ *
+ * The calendar picker renders inside the block editor's canvas iframe, so this sheet has
+ * to go into that document's head, not ours. Everything above deals with the full-screen
+ * overlay, which is opened from the sidebar and so belongs to the outer document.
+ */
+const newSelectSheet = (doc) => {
+  const embedEl = doc.querySelector('[tkfwp-select="true"]');
   if (embedEl) {
-    document.head.removeChild(embedEl);
+    doc.head.removeChild(embedEl);
   }
 
   // Create the <style> tag
-  const style = document.createElement("style");
+  const style = doc.createElement("style");
   style.setAttribute("tkfwp-select", "true");
   style.setAttribute("data-noprefix", "");
   // WebKit hack :(
-  style.appendChild(document.createTextNode(""));
+  style.appendChild(doc.createTextNode(""));
   // Add the <style> element to the page
-  document.head.appendChild(style);
+  doc.head.appendChild(style);
 
   return style.sheet;
 };
 
 let selectSheet;
+let selectSheetDoc;
 
-const updateCSSRule = (selector, rules) => {
-  if (!selectSheet) {
-    selectSheet = newSelectSheet();
+const updateCSSRule = (doc, selector, rules) => {
+  if (!selectSheet || selectSheetDoc !== doc) {
+    selectSheet = newSelectSheet(doc);
+    selectSheetDoc = doc;
   }
   else {
     selectSheet.deleteRule(0);
@@ -244,8 +252,14 @@ const updateCSSRule = (selector, rules) => {
   selectSheet.insertRule(selector + ' ' + jsonToCSS(rules), 0);
 };
 
-export const updateCalendarSelect = (placeholder) => {
-  const calContent = querySelector('.wp_tkf_calendar_select div div div');
+/**
+ * @param placeholder - the picker's placeholder text, which means "nothing selected"
+ * @param scope - the block's root element; both the picker and the sheet live in its document
+ */
+export const updateCalendarSelect = (placeholder, scope) => {
+  if (!scope) return;
+
+  const calContent = scope.querySelector('.wp_tkf_calendar_select div div div');
 
   if (calContent && calContent.getBoundingClientRect) {
     const rect = calContent.getBoundingClientRect();
@@ -256,7 +270,7 @@ export const updateCalendarSelect = (placeholder) => {
       width = ~~rect.width;
     }
 
-    updateCSSRule('.wp_tkf_calendar_select input', {
+    updateCSSRule(scope.ownerDocument, '.wp_tkf_calendar_select input', {
       left: width + 'px',
       position: 'relative'
     });

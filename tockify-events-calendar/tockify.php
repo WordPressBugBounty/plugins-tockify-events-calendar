@@ -4,7 +4,7 @@
  * Plugin Name:       Tockify Events Calendar
  * Plugin URI:        https://tockify.com/i/docs/install/wordpress
  * Description:       The official Tockify Calendar plugin for Wordpress. It adds a block, shortcode, and sidebar widget that makes it easy to add a Tockify calendar to your site.
- * Version:           2.4.0
+ * Version:           2.5.0
  * Author:            Tockify Ltd
  * Author URI:        https://tockify.com
  * License:           GPL-2.0+

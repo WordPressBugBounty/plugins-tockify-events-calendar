@@ -1,0 +1,11 @@
+# Marks this directory as its own pnpm root, so the plugin build stays independent
+# of the client repo's workspace above it. Without this file, `pnpm install` here
+# walks up to client/pnpm-workspace.yaml and installs nothing.
+packages: []
+
+# sass ships @parcel/watcher for its CLI --watch; we compile through sass-loader's
+# JS API, so its native build is not needed. core-js@2's install script only prints
+# a funding banner. Neither needs to run, so neither is allowed to.
+allowBuilds:
+  '@parcel/watcher': false
+  core-js: false

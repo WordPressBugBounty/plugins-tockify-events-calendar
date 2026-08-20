@@ -24,6 +24,8 @@ import {BlockAlignmentToolbar, BlockControls, InspectorAdvancedControls, Inspect
 
 // https://react-select.com
 import CreatableSelect from 'react-select/creatable';
+import createCache from '@emotion/cache';
+import {CacheProvider} from '@emotion/react';
 import classnames from 'classnames';
 
 import './tockifyBlocks.scss';
@@ -46,12 +48,64 @@ const getResizable = align => {
   return align && ['wide', 'full'].indexOf(align) === -1 && isLargeViewport;
 };
 
+/*
+ * Since WP 7.1 the block editor canvas is always an iframe, so the block's DOM — and the
+ * embed script that renders calendars into it — live in a different document from the one
+ * this bundle runs in. Everything that touches the block's DOM goes through its root
+ * element, which is registered here by a ref, and through that element's ownerDocument.
+ */
+const blockRoots = new Map();
+const blockRootRefs = new Map();
+
+const setBlockRoot = (clientId, el) => {
+  if (el) {
+    blockRoots.set(clientId, el);
+  } else {
+    blockRoots.delete(clientId);
+  }
+};
+
+/* stable ref callback per block, so re-rendering does not detach and reattach */
+const blockRootRef = clientId => {
+  let ref = blockRootRefs.get(clientId);
+  if (!ref) {
+    ref = el => setBlockRoot(clientId, el);
+    blockRootRefs.set(clientId, ref);
+  }
+  return ref;
+};
+
+const blockRoot = clientId => blockRoots.get(clientId);
+
 /**
  * helper - reloads calendar after delay in case of dom render slowness (who knows where this will run).
+ * The document is resolved when the timer fires, not when it is set, because the block may
+ * not be mounted yet. _tkf is checked every time: it belongs to the canvas window and may
+ * not have loaded (or may have been blocked by the host page's policies).
+ * @param clientId - which block to reload the calendars of
  * @param ms - how long to wait
  * @returns
  */
-const loadDeclaredAfter = ms => setTimeout(() => window._tkf.loadDeclaredCalendars(), ms);
+const loadDeclaredAfter = (clientId, ms) => setTimeout(() => {
+  const el = blockRoot(clientId);
+  const win = el && el.ownerDocument.defaultView;
+
+  if (win && win._tkf && win._tkf.loadDeclaredCalendars) {
+    win._tkf.loadDeclaredCalendars();
+  }
+}, ms);
+
+/* one emotion cache per document, so react-select styles land in the canvas iframe */
+const emotionCaches = new WeakMap();
+
+const emotionCacheFor = doc => {
+  let cache = emotionCaches.get(doc);
+  if (!cache) {
+    cache = createCache({key: 'tkfwp', container: doc.head});
+    emotionCaches.set(doc, cache);
+  }
+  return cache;
+};
 
 /**
  * merges modified attributes into properties without breaking immutability
@@ -63,8 +117,9 @@ const mergeAttrs = (props, modifiedAttrs) => {
   return Object.assign({}, props, {attributes});
 };
 
-// Note: to use localhost embed you also need to change URL in scripts.php
-const tkfBase = "https://tockify.com";
+// Set by blocks.php from tockify_base_url(); override with TOCKIFY_BASE_URL in wp-config.php
+const tkfConfig = window.tockifyConfig || {};
+const tkfBase = tkfConfig.baseUrl || "https://tockify.com";
 const apiBase = tkfBase;
 
 let calOptions = [];
@@ -116,13 +171,21 @@ class CalControl extends Component {
     this.setState({calOpts});
   };
 
+  /* the wrapper tells us which document we were rendered into */
+  setScope = (el) => {
+    if (el && this.state.doc !== el.ownerDocument) {
+      this.setState({doc: el.ownerDocument});
+    }
+  };
+
   render = () => {
     const {
       attributes: className, calName, onChange
     } = this.props;
     const calOpts = this.state.calOpts || [];
+    const {doc} = this.state;
 
-    return <CreatableSelect
+    const select = <CreatableSelect
         isClearable
         className={'wp_tkf_calendar_select ' + className}
         placeholder='Calendar short name'
@@ -135,7 +198,24 @@ class CalControl extends Component {
         isValidNewOption={input => input.match(/^[\w\d.]+$/)}
         noOptionsMessage={() => 'Invalid short code'}
         onMenuOpen={() => updateCalendars()}
-    />
+    />;
+
+    /*
+     * react-select styles itself with emotion, which writes into the document of the window
+     * it runs in — the outer editor page. This picker renders inside the canvas iframe, so
+     * wait for the wrapper to tell us that document, then give emotion a cache pointed at
+     * its head. The extra render happens before the browser paints, so nothing flashes.
+     * The tag and extras pickers are rendered in the sidebar, in the outer document, and
+     * need none of this.
+     */
+    /*
+     * display:contents so the wrapper generates no box: the form is a flexbox and
+     * .wp_tkf_calendar_select is sized as a percentage of it, so react-select's own
+     * container has to stay the flex item.
+     */
+    return <div ref={this.setScope} style={{display: 'contents'}}>
+      {doc && <CacheProvider value={emotionCacheFor(doc)}>{select}</CacheProvider>}
+    </div>
   }
 }
 
@@ -230,20 +310,22 @@ class TockifyBlock extends Component {
     const tmpcal = props.attributes.tmpcal;
 
     if (tmpcal) {
-      const blockScope = document.querySelector('[data-block="' + clientId + '"]');
-      const previewEl = blockScope.querySelector('.wp_tkf_preview');
+      const blockScope = blockRoot(clientId);
+      const previewEl = blockScope && blockScope.querySelector('.wp_tkf_preview');
 
       if (previewEl) {
+        const doc = previewEl.ownerDocument;
+
         while (previewEl.firstChild) {
           previewEl.removeChild(previewEl.firstChild);
         }
 
         const el = getCoreEmbedCode(mergeAttrs(props, {calendar: tmpcal}), true);
         setTimeout(() => {
-          const newDiv = document.createElement('div');
+          const newDiv = doc.createElement('div');
           previewEl.appendChild(newDiv);
           render(el, newDiv);
-          [50, 100, 300, 500, 1000, 1500, 2000].forEach(loadDeclaredAfter);
+          [50, 100, 300, 500, 1000, 1500, 2000].forEach(ms => loadDeclaredAfter(clientId, ms));
         }, 10);
       }
 
@@ -286,8 +368,10 @@ class TockifyBlock extends Component {
    */
   renderEditor = (props) => {
 
+    const {clientId} = props;
+
     //so the preview comes back when you edit visually
-    loadDeclaredAfter(200);
+    loadDeclaredAfter(clientId, 200);
 
     const {
       attributes: {calendar, tmpcal, extras},
@@ -335,13 +419,13 @@ class TockifyBlock extends Component {
       }
     }
 
-    setTimeout(() => updateCalendarSelect('Calendar short name'), 100);
+    setTimeout(() => updateCalendarSelect('Calendar short name', blockRoot(clientId)), 100);
 
     const calChanged = (calendar) => {
       const cal = calendar ? calendar.value : '';
       this.updatePreviewWith(props, {calendar: cal, tmpcal: cal, tags: undefined, extras: undefined, maxEvents: 0});
       updateTagOptions(cal, true);
-      setTimeout(() => updateCalendarSelect('Calendar short name'), 100);
+      setTimeout(() => updateCalendarSelect('Calendar short name', blockRoot(clientId)), 100);
     };
 
     // noinspection JSXNamespaceValidation
@@ -532,7 +616,7 @@ class TockifyBlock extends Component {
           </PanelRow>
         </InspectorAdvancedControls>
 
-        <div className='wp_tkf_edit'>
+        <div className='wp_tkf_edit' ref={blockRootRef(props.clientId)}>
           {
             isResizable && (
               <ResizableBox

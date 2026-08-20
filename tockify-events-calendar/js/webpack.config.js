@@ -1,15 +1,13 @@
 // webpack.config.js
 const path = require('path');
+const {merge} = require('webpack-merge');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const {DuplicatesPlugin} = require('inspectpack/plugin')
 const TerserPlugin = require("terser-webpack-plugin");
 
 
 const isProductionMode = process.env.NODE_ENV === 'production';
-
-const productionPlugins = [
-    new BundleAnalyzerPlugin({analyzerPort:8889})
-];
 
 const developmentPlugins = [
     new DuplicatesPlugin({
@@ -33,9 +31,34 @@ const wplib = [
   'data',
 ];
 
-module.exports = {
+module.exports = (env = {}) => {
+
+  // Static report rather than a server, so the build exits when it is done.
+  // Skip it with:  pnpm build --env showAnalyser=false
+  const analyser = (!isProductionMode || env.showAnalyser === 'false') ? {} : {
+    plugins: [
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'static',
+        openAnalyzer: true,
+        // written outside tockify/, so the report is never rsynced to wordpress.org
+        reportFilename: path.resolve(__dirname, '../../report.html')
+      })
+    ]
+  }
+
+  return merge(analyser, {
   mode: isProductionMode ? 'production' : 'development',
-  plugins: isProductionMode ? productionPlugins : developmentPlugins,
+  plugins: [
+    /*
+     * Emit the block's styles as a real stylesheet instead of injecting them at runtime:
+     * since WP 7.1 the editor canvas is an iframe, and runtime injection writes into the
+     * outer document. blocks.php registers this file as the block's editor_style, so
+     * WordPress puts it in the canvas iframe and on the outer editor page, but not on the
+     * front end.
+     */
+    new MiniCssExtractPlugin({filename: 'tockify.blocks.css'}),
+    ...(isProductionMode ? [] : developmentPlugins)
+  ],
   entry: {
     embed: path.resolve(__dirname, 'src/block.jsx')
   },
@@ -89,14 +112,14 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          'style-loader',
+          MiniCssExtractPlugin.loader,
           'css-loader',
         ]
       },
       {
         test: /\.scss$/,
         use: [
-          'style-loader', // creates style nodes from JS strings
+          MiniCssExtractPlugin.loader, // extracts to bin/tockify.blocks.css
           'css-loader', // translates CSS into CommonJS
           {
             loader: 'postcss-loader',
@@ -134,4 +157,5 @@ module.exports = {
     modules: [path.resolve(__dirname, 'src'), 'node_modules'],
     extensions: ['.js', '.jsx']
   }
+  });
 };

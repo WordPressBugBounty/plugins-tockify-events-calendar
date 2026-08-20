@@ -1,9 +1,9 @@
 === Tockify Events Calendar ===
 Contributors: Tockify
-Tags: events, calendar, event, events calendar, date, google, conference, icalendar, ics, webinar, recurring, agenda, workshop, concert, meeting, seminar, summit
-Requires at least: 4.1
-Tested up to: 7.0
-Stable tag: trunk
+Tags: calendar, events, event calendar, google calendar, ical
+Requires at least: 5.0
+Tested up to: 7.1
+Stable tag: 2.5.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -11,10 +11,6 @@ Tockify Calendar is a modern attractive website calendar. Beautiful. Intuitive. 
 
 
 == Description ==
-
-**Wordpress 5 and 6 Notice**
-
-Wordpress 5 and 6 users should only use Tockify Plugin **version 2.0.1** or later - preferably the latest version.
 
 **About Tockify Calendar**
 
@@ -28,19 +24,22 @@ We also provide a Tockify **Block** for visual editing with Wordpress 5.
 
 This plugin can be used with both the free and the subscription editions of Tockify Calendar.
 
+It's great for businesses, schools and universities, news sites, clubs, dance studios, gyms, yoga studios, churches, summits,
+workshops and seminars.
+
 **Tockify Calendar Features**
 
  - **Month**, **Agenda** and **Pinboard** style layouts.
  - Attractive **Mini Calendar** widget that's great for sidebars and other small spaces.
  - Highly **customizable** appearance.
  - Live sync with **Google Calendar**.
- - Social sharing to **Facebook**, **Twitter** etc.
+ - Social sharing to **Facebook**, **Twitter/X** etc.
  - Ticket/**Call To Action** buttons.
  - Embed Video from YouTube, Vimeo or Facebook.
  - Customizable **RSVP forms**.
  - Accept and approve **community submitted events**.
  - Simple, powerful editor with complex **repeating events** support and built in image cropping.
- - Built in tag and text based **search**.
+ - Built in visual tag picker and text based **search**. Advanced tag picker UI.
  - Built in **maps** and directions.
  - **iCalendar** support so people can subscribe with, for example, their phone's built in calendar.
  - Continuous calendar **backup**.
@@ -106,6 +105,10 @@ More information and details about how to use the Tockify plugin and shortcode a
 5. **Mini Calendar** widget for sidebars and small spaces.
 
 == Changelog ==
+
+= 2.5.0 =
+* Fixed the calendar preview not rendering in the block editor on WordPress 7.1, which now always shows the editor in an iframe
+* Tested with Wordpress 7.1 and for backwards compatibility
 
 = 2.4.0 =
 * Tested with Wordpress 7.0
@@ -360,6 +363,10 @@ More information and details about how to use the Tockify plugin and shortcode a
 * This is the beginning
 
 == Upgrade Notice ==
+
+= 2.5.0 =
+* Tested with Wordpress 7.1
+* Supports new iframe based block editor used by Wordpress 7.1
 
 = 2.4.0 =
 * Tested with Wordpress 7.0
